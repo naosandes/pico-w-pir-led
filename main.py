@@ -3,17 +3,17 @@ import machine
 import network #Pico WからデータWi-Fiチップを動かすための標準ライブラリ
 import urequests #インターネット上のホームページやサーバーに対して、データを取得(get)したり送信(post)したりする役割
 
-time.sleep(0.1) # Wait for USB to become ready
-
 print("Hello, Pi Pico W!")
 
-# --- 設定項目 ---
+# --- Supabaseの設定項目 ---
 #Wokwiのシミュレーター用Wi-Fi設定
 SSID = 'Wokwi-GUEST'
-PASSWORD = ""
+PASSWORD = ''
 
 #データを送信するWebサーバーのURL　※後に実際のWebサーバーURLに変更！
-SERVER_URL = 'http://my-web-server.com/api/log_sensor'
+SERVER_URL = 'https://ogcbgknuysyfoskqbihc.supabase.co/rest/v1/sensor_logs'
+
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nY2Jna251eXN5Zm9za3FiaWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTAwMTIsImV4cCI6MjA5NzIyNjAxMn0.oRkmSJ5vPh2RKRDegK9zsy1fNccP8ryZBcMByNg85jQ'
 
 #ピンの設定
 pin_sensor = machine.Pin(13, machine.Pin.IN)
@@ -33,7 +33,8 @@ def connect_wifi():
             time.sleep(1)
     print('Wi-Fi接続成功! IPアドレス:', wlan.ifconfig()[0])
 
-#最初にWi-Fiに接続しておく    
+#最初にWi-Fiに接続しておく  
+time.sleep(0.1) #接続処理を行う前に待機時間を設定する  
 connect_wifi()    
 print('センサー作動中')
 
@@ -48,17 +49,24 @@ while True:
         try: #エラーをキャッチしながら実行するための構文　フリーズ防止機能
             #サーバーに送るデータ（Json形式）
             #『検知した』というステータスなどを送信
-            data = {'device_id': 'pico_w_01', 'status': 'detected'}
+            data = {'device_name': 'pico_w_01'}
 
-            print('データを送信中...')
+            #Supabaseの認証用ヘッダー
+            headers = {
+                'apikey': SUPABASE_KEY,
+                'Authorization': 'Bearer '+ SUPABASE_KEY,
+                'Content-Type': 'application/json'
+            }
+
+            print('Supabaseへデータを送信中...')
             #HTTP POSTという方法でサーバーにデータを送信
-            response = urequests.post(SERVER_URL, json=data)
+            response = urequests.post(SERVER_URL, json=data, headers=headers)
 
             #サーバーからの返事（200番なら成功）
-            if response.status_code == 200:
-                print('サーバーへの送信成功')
+            if  response.status_code == 201 or response.status_code == 200:
+                print('SQLへの保存成功')
             else:
-                print('サーバーエラー:',response.status_code)
+                print('送信エラー。ステータスコード:',response.status_code)
             response.close() #メモリ開放のために必ず閉じる
 
         except Exception as e:
