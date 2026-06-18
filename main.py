@@ -29,10 +29,25 @@ def connect_wifi():
     if not wlan.isconnected():
         print('Wi-Fiに接続中...')
         wlan.connect(SSID, PASSWORD)
+        #タイムアウトのカウンターを用意
+        attempt = 0
+        max_attempt = 15
         #接続完了まで待機
         while not wlan.isconnected():
             time.sleep(1)
-    print('Wi-Fi接続成功! IPアドレス:', wlan.ifconfig()[0])
+            #1秒待つごとに、数字を1づつ増やす
+            attempt=+1
+            print(f'接続を待っています... ({attempt}秒経過)')
+            #数字が15以上になるとループが終了し、接続中断
+            if attempt>=max_attempt:
+                print('15秒経過しても接続ができないため、中断します。')
+                break
+    
+    if wlan.isconnected():
+        print('Wi-Fi接続成功! IPアドレス:', wlan.ifconfig()[0])
+        return True
+    else:
+        return False
 
 #最初にWi-Fiに接続しておく  
 time.sleep(0.1) #接続処理を行う前に待機時間を設定する  
@@ -90,9 +105,19 @@ def sensor_handler(pin):
         led_red.value(1)
         led_blue.value(0)
 
-        connect_wifi() #Wi-Fiへ再接続
-        led_red.value(0) #再接続終了後、消灯
-        print('再接続完了')
+        wifi_success = connect_wifi() #Wi-Fiへ再接続
+
+        if wifi_success:
+            led_red.value(0) #再接続終了後、消灯
+            print('再接続完了')
+        else:
+            #15秒経っても接続されない場合
+            print('接続失敗のため待機モードへ入ります。')
+            for i in range(5):
+                led_red.value(1)
+                time.sleep(0.1)
+                led_red.value(0)
+                time.sleep(0.1)
 
 pin_sensor.irq(trigger=machine.Pin.IRQ_RISING, handler=sensor_handler)
 
