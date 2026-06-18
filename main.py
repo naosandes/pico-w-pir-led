@@ -39,66 +39,63 @@ time.sleep(0.1) #接続処理を行う前に待機時間を設定する
 connect_wifi() #関数の呼び出し
 print('センサー作動中')
 
+#センサーが反応した時に『実行したい処理』を関数で定義
+def sensor_handler(pin):
+    print('動きを検知しました')
+    led_red.value(1)
+    led_blue.value(1)
+
+# --- ②サーバーへデータ送信
+    try: #エラーをキャッチしながら実行するための構文　フリーズ防止機能
+            #サーバーに送るデータ（Json形式）
+            #『検知した』というステータスなどを送信
+        data = {'device_name': 'pico_w_01', 'status': 'detected'}
+
+         #Supabaseの認証用ヘッダー
+        headers = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer '+ SUPABASE_KEY, #Authorizationはパスワードやトークンを提示する合図、Bearerは当該トークンの提示者を正規ユーザーとして認める仕組み（認証方式）。'Bearer 'の空白には実際のトークンが入るためのもの。
+            'Content-Type': 'application/json' #送信するデータの形式設定
+            }
+
+        print('Supabaseへデータを送信中...')
+        #HTTP POSTという方法でサーバーにデータを送信
+        response = urequests.post(SERVER_URL, json=data, headers=headers) #括弧内のデータは送信側のもつポケット（右側のjson, headers）に実際の変数を入力することにより機能する。
+
+        #サーバーからの返事（200番なら成功）
+        if  response.status_code == 201 or response.status_code == 200:                
+            print('SQLへの保存成功')
+            led_red(0)
+            for i in range(4):
+                led_blue.value(1)
+                time.sleep(1)
+                led_blue.value(0)
+                time.sleep(0.5)
+        else:
+            print('送信エラー。ステータスコード:',response.status_code)
+            led_blue(0)
+            for i in range(4):
+                led_red.value(1)
+                time.sleep(1)
+                led_red.value(0)
+                time.sleep(1)
+        response.close() #メモリ開放のために必ず閉じる。閉じなければメモリがいっぱいになってしまう。
+        led_red.value(0)
+        led_blue.value(0) 
+        print('正常に反応しました')
+
+    except Exception as e:
+        print('送信失敗(ネットワークエラーなど）:', e)
+
+        led_red.value(1)
+        led_blue.value(0)
+
+        connect_wifi() #Wi-Fiへ再接続
+        led_red.value(0) #再接続終了後、消灯
+        print('再接続完了')
+
+pin_sensor.irq(trigger=machine.Pin.IRQ_RISING, handler=sensor_handler)
 
 # --- メインループ ---
 while True:
-    if pin_sensor.value() == 1:
-        led_red.value(1)
-        led_blue.value(1)
-        print('動きを検知しました')
-
-        # --- ②サーバーへデータ送信
-        try: #エラーをキャッチしながら実行するための構文　フリーズ防止機能
-            #サーバーに送るデータ（Json形式）
-            #『検知した』というステータスなどを送信
-            data = {'device_name': 'pico_w_01', 'status': 'detected'}
-
-            #Supabaseの認証用ヘッダー
-            headers = {
-                'apikey': SUPABASE_KEY,
-                'Authorization': 'Bearer '+ SUPABASE_KEY, #Authorizationはパスワードやトークンを提示する合図、Bearerは当該トークンの提示者を正規ユーザーとして認める仕組み（認証方式）。'Bearer 'の空白には実際のトークンが入るためのもの。
-                'Content-Type': 'application/json' #送信するデータの形式設定
-            }
-
-            print('Supabaseへデータを送信中...')
-            #HTTP POSTという方法でサーバーにデータを送信
-            response = urequests.post(SERVER_URL, json=data, headers=headers) #括弧内のデータは送信側のもつポケット（右側のjson, headers）に実際の変数を入力することにより機能する。
-
-            #サーバーからの返事（200番なら成功）
-            if  response.status_code == 201 or response.status_code == 200:                
-                print('SQLへの保存成功')
-                led_red(0)
-                for i in range(4):
-                    led_blue.value(1)
-                    time.sleep(1)
-                    led_blue.value(0)
-                    time.sleep(0.5)
-            else:
-                print('送信エラー。ステータスコード:',response.status_code)
-                led_blue(0)
-                for i in range(4):
-                    led_red.value(1)
-                    time.sleep(1)
-                    led_red.value(0)
-                    time.sleep(1)
-            response.close() #メモリ開放のために必ず閉じる。閉じなければメモリがいっぱいになってしまう。
-            led_red.value(0)
-            led_blue.value(0) 
-            print('正常に反応しました')
-
-        except Exception as e:
-            print('送信失敗(ネットワークエラーなど）:', e)
-
-            led_red.value(1)
-            led_blue.value(0)
-
-            connect_wifi() #Wi-Fiへ再接続
-            led_red.value(0) #再接続終了後、消灯
-            print('再接続完了')
-
-        time.sleep(3.0) #3秒間待機することによって1つの処理終了後に連続した検知をしないようにする。Dos攻撃として検知されないようにする対策としても活用できる。
-        
-    else:
-        led_red.value(0)
-        led_blue.value(0)
-        time.sleep(0.1) #動体検知がない場合は装置の負荷を抑えるため
+    time.sleep(1)
