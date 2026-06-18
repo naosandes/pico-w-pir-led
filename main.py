@@ -17,7 +17,8 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 #ピンの設定
 pin_sensor = machine.Pin(13, machine.Pin.IN)
-led = machine.Pin(10, machine.Pin.OUT)
+led_red = machine.Pin(10, machine.Pin.OUT)
+led_blue = machine.Pin(8, machine.Pin.OUT)
 
 print('センサー作動中')
 
@@ -35,14 +36,15 @@ def connect_wifi():
 
 #最初にWi-Fiに接続しておく  
 time.sleep(0.1) #接続処理を行う前に待機時間を設定する  
-connect_wifi()    
+connect_wifi() #関数の呼び出し
 print('センサー作動中')
 
 
 # --- メインループ ---
 while True:
     if pin_sensor.value() == 1:
-        led.value(1)
+        led_red.value(1)
+        led_blue.value(1)
         print('動きを検知しました')
 
         # --- ②サーバーへデータ送信
@@ -65,25 +67,38 @@ while True:
             #サーバーからの返事（200番なら成功）
             if  response.status_code == 201 or response.status_code == 200:                
                 print('SQLへの保存成功')
+                led_red(0)
                 for i in range(4):
-                    led.value(1)
+                    led_blue.value(1)
                     time.sleep(1)
-                    led.value(0)
+                    led_blue.value(0)
                     time.sleep(0.5)
             else:
                 print('送信エラー。ステータスコード:',response.status_code)
-                for i in range(6):
-                    led.value(1)
-                    time.sleep(0.3)
-                    led.value(0)
-                    time.sleep(0.3)
+                led_blue(0)
+                for i in range(4):
+                    led_red.value(1)
+                    time.sleep(1)
+                    led_red.value(0)
+                    time.sleep(1)
             response.close() #メモリ開放のために必ず閉じる。閉じなければメモリがいっぱいになってしまう。
+            led_red.value(0)
+            led_blue.value(0) 
+            print('正常に反応しました')
 
         except Exception as e:
             print('送信失敗(ネットワークエラーなど）:', e)
-        time.sleep(3.0) #3秒間待機
-        led.value(0) 
-        print('正常に反応しました')
+
+            led_red.value(1)
+            led_blue.value(0)
+
+            connect_wifi() #Wi-Fiへ再接続
+            led_red.value(0) #再接続終了後、消灯
+            print('再接続完了')
+
+        time.sleep(3.0) #3秒間待機することによって1つの処理終了後に連続した検知をしないようにする。Dos攻撃として検知されないようにする対策としても活用できる。
+        
     else:
-        led.value(0)
+        led_red.value(0)
+        led_blue.value(0)
         time.sleep(0.1) #動体検知がない場合は装置の負荷を抑えるため
