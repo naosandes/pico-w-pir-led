@@ -49,25 +49,35 @@ while True:
         try: #エラーをキャッチしながら実行するための構文　フリーズ防止機能
             #サーバーに送るデータ（Json形式）
             #『検知した』というステータスなどを送信
-            data = {'device_name': 'pico_w_01'}
+            data = {'device_name': 'pico_w_01', 'status': 'detected'}
 
             #Supabaseの認証用ヘッダー
             headers = {
                 'apikey': SUPABASE_KEY,
-                'Authorization': 'Bearer '+ SUPABASE_KEY,
-                'Content-Type': 'application/json'
+                'Authorization': 'Bearer '+ SUPABASE_KEY, #Authorizationはパスワードやトークンを提示する合図、Bearerは当該トークンの提示者を正規ユーザーとして認める仕組み（認証方式）。'Bearer 'の空白には実際のトークンが入るためのもの。
+                'Content-Type': 'application/json' #送信するデータの形式設定
             }
 
             print('Supabaseへデータを送信中...')
             #HTTP POSTという方法でサーバーにデータを送信
-            response = urequests.post(SERVER_URL, json=data, headers=headers)
+            response = urequests.post(SERVER_URL, json=data, headers=headers) #括弧内のデータは送信側のもつポケット（右側のjson, headers）に実際の変数を入力することにより機能する。
 
             #サーバーからの返事（200番なら成功）
-            if  response.status_code == 201 or response.status_code == 200:
+            if  response.status_code == 201 or response.status_code == 200:                
                 print('SQLへの保存成功')
+                for i in range(4):
+                    led.value(1)
+                    time.sleep(1)
+                    led.value(0)
+                    time.sleep(0.5)
             else:
                 print('送信エラー。ステータスコード:',response.status_code)
-            response.close() #メモリ開放のために必ず閉じる
+                for i in range(6):
+                    led.value(1)
+                    time.sleep(0.3)
+                    led.value(0)
+                    time.sleep(0.3)
+            response.close() #メモリ開放のために必ず閉じる。閉じなければメモリがいっぱいになってしまう。
 
         except Exception as e:
             print('送信失敗(ネットワークエラーなど）:', e)
