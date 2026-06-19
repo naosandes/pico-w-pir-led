@@ -19,6 +19,8 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 pin_sensor = machine.Pin(13, machine.Pin.IN)
 led_red = machine.Pin(10, machine.Pin.OUT)
 led_blue = machine.Pin(8, machine.Pin.OUT)
+#内部温度センサーの設定
+sensor_temp = machine.ADC(4)
 
 print('センサー作動中')
 
@@ -59,12 +61,21 @@ def sensor_handler(pin):
     print('動きを検知しました')
     led_red.value(1)
     led_blue.value(1)
+    #温度センサーの値を読み取り温度（℃）へ変換
+    reading = sensor_temp.read_u16() * (3.3/65535)
+    temprature = 27 - (reading - 0.706) / 0.001721
+    #小数点第一位までに丸める
+    temprature = round(temprature, 1)
+    print(f'現在のマイコン温度: {temprature}℃')
 
 # --- ②サーバーへデータ送信
     try: #エラーをキャッチしながら実行するための構文　フリーズ防止機能
             #サーバーに送るデータ（Json形式）
             #『検知した』というステータスなどを送信
-        data = {'device_name': 'pico_w_01', 'status': 'detected'}
+        data = {'device_name': 'pico_w_01', 
+                'status': 'detected',
+                'temprature': temprature
+                }
 
          #Supabaseの認証用ヘッダー
         headers = {
