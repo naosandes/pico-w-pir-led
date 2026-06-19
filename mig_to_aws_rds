@@ -1,0 +1,28 @@
+import pandas as pd
+from sqlalchemy import create_engine
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+#AWS RDSの接続情報 環境変数（.env）から取得
+DB_ENDPOINT = os.getenv('DB_ENDPOINT')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+#残りは通常の接続情報
+DB_NAME = 'postgres'
+DB_USER = 'postgres'
+#CSVファイルのパス
+CSV_FILE_PATH = r'C:\Users\horii\Desktop\python_lesson\Supabase Snippet Untitled query.csv'
+
+#データベースへ接続　いつでもAWS　RDSに接続できるようにするためのコード
+db_url = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_ENDPOINT}:5432/{DB_NAME}'
+engine = create_engine(db_url) #AWS　RDSに接続するためのエンジンを作成
+
+try:
+    df = pd.read_csv(CSV_FILE_PATH)
+    print('CSVファイルを読み込みました。')
+    #AWS RDSのデータベースにデータを移行する
+    df.to_sql('sensor_logs', engine, if_exists='replace', index=False)
+    print('データベースへデータを移行しました。')
+except Exception as e:
+    print(f'CSVファイルの読み込みに失敗しました: {e}')
