@@ -86,7 +86,7 @@ def sensor_handler(pin):
 
         #サーバーからの返事（200番なら成功）
         if  response.status_code == 201 or response.status_code == 200:                
-            print('AWSへの保存成功')
+            print('AWSへの送信成功')
             led_red(0)
             for i in range(4):
                 led_blue.value(1)
