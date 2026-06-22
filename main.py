@@ -2,18 +2,17 @@ import time
 import machine
 import network #Pico WからデータWi-Fiチップを動かすための標準ライブラリ
 import urequests #インターネット上のホームページやサーバーに対して、データを取得(get)したり送信(post)したりする役割
+import os
 
 print("Hello, Pi Pico W!")
 
-# --- Supabaseの設定項目 ---
+# --- AWSの送信先設定 ---
 #Wokwiのシミュレーター用Wi-Fi設定
 SSID = 'Wokwi-GUEST'
 PASSWORD = ''
 
-#データを送信するWebサーバーのURL　※後に実際のWebサーバーURLに変更！
-SERVER_URL = 'https://ogcbgknuysyfoskqbihc.supabase.co/rest/v1/sensor_logs'
-
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nY2Jna251eXN5Zm9za3FiaWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTAwMTIsImV4cCI6MjA5NzIyNjAxMn0.oRkmSJ5vPh2RKRDegK9zsy1fNccP8ryZBcMByNg85jQ'
+#AWS(EC2)へデータを送信するWebサーバーのURL　※後に実際のWebサーバーURLに変更！
+SERVER_URL = 'http://ec2-13-208-225-4.ap-northeast-3.compute.amazonaws.com/sensor'
 
 #ピンの設定
 pin_sensor = machine.Pin(13, machine.Pin.IN)
@@ -38,7 +37,7 @@ def connect_wifi():
         while not wlan.isconnected():
             time.sleep(1)
             #1秒待つごとに、数字を1づつ増やす
-            attempt=+1
+            attempt += 1
             print(f'接続を待っています... ({attempt}秒経過)')
             #数字が15以上になるとループが終了し、接続中断
             if attempt>=max_attempt:
@@ -77,20 +76,17 @@ def sensor_handler(pin):
                 'temprature': temprature
                 }
 
-         #Supabaseの認証用ヘッダー
-        headers = {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer '+ SUPABASE_KEY, #Authorizationはパスワードやトークンを提示する合図、Bearerは当該トークンの提示者を正規ユーザーとして認める仕組み（認証方式）。'Bearer 'の空白には実際のトークンが入るためのもの。
-            'Content-Type': 'application/json' #送信するデータの形式設定
-            }
+        
+        #AWS送信するデータの形式設定
+        headers = {'Content-Type': 'application/json'}
 
-        print('Supabaseへデータを送信中...')
-        #HTTP POSTという方法でサーバーにデータを送信
+        print('EC2へデータを送信中...')
+        #HTTP POSTという方法でSERVER_URLにリクエストを送信
         response = urequests.post(SERVER_URL, json=data, headers=headers) #括弧内のデータは送信側のもつポケット（右側のjson, headers）に実際の変数を入力することにより機能する。
 
         #サーバーからの返事（200番なら成功）
         if  response.status_code == 201 or response.status_code == 200:                
-            print('SQLへの保存成功')
+            print('AWSへの保存成功')
             led_red(0)
             for i in range(4):
                 led_blue.value(1)
