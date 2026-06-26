@@ -1,0 +1,11 @@
+from flask import Flask, request
+main = Flask(__name__)
+
+#/にpost通信が来たら実行（ルーティング）
+@main.route('/', method=['post'])
+def receive():
+    print(request.json)
+    return 'OK'
+
+#hostはＩＰアドレスを示しており、全てのＩＰアドレスを許可している
+main.run(host='0.0.0.0', port=5000)
