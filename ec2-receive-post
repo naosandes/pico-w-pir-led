@@ -2,7 +2,7 @@ from flask import Flask, request
 main = Flask(__name__)
 
 #/にpost通信が来たら実行（ルーティング）
-@main.route('/', method=['post'])
+@main.route('/', methods=['post'])
 def receive():
     print(request.json)
     return 'OK'
