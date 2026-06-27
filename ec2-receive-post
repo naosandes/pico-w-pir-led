@@ -1,11 +1,47 @@
 from flask import Flask, request
+import pymysql
+
 main = Flask(__name__)
 
-#/にpost通信が来たら実行（ルーティング）
-@main.route('/', methods=['post'])
-def receive():
-    print(request.json)
-    return 'OK'
+DB_HOST = 'database-1.cdg4g6mg00u2.ap-northeast-3.rds.amazonaws.com'
+DB_USER = ''
+DB_PASSWORD = 
+DB_NAME = 'sensor_db'
 
-#hostはＩＰアドレスを示しており、全てのＩＰアドレスを許可している
-main.run(host='0.0.0.0', port=5000)
+#/にpost通信が来たら関数実行（ルーティング）
+@main.route('/sensor', methods=['post'])
+def receive():
+    #Jsonデータを取得
+    data = request.json_get()
+    device_name = data.get('device_name')
+    status = data.get('status')
+
+    #RDSへ接続
+    connection = pymysql.connect(
+        host=DB_HOST
+        user=DB_USER
+        password=DB_PASSWORD
+        nama=DB_NAME
+        charset=
+    )
+    
+    try:
+        #cursorでSQLの実行
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO sensor_logs(device_name, status)
+            VALUES (%s, %s)
+
+            cursor.execute(sql,(device_name, status))
+        #保存の確定
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    return '保存完了' 200
+
+if __name__ == '__main__':
+    #hostはipアドレスを示しており、全てのipアドレスを許可している
+    main.run(host='0.0.0.0', port=5000)
+
