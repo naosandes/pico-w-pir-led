@@ -3,6 +3,7 @@ import machine
 import network #Pico WからデータWi-Fiチップを動かすための標準ライブラリ
 import urequests #インターネット上のホームページやサーバーに対して、データを取得(get)したり送信(post)したりする役割
 import os
+import ujson
 
 print("Hello, Pi Pico W!")
 
@@ -12,14 +13,12 @@ SSID = 'Wokwi-GUEST'
 PASSWORD = ''
 
 #AWS(EC2)へデータを送信するWebサーバーのURL　※後に実際のWebサーバーURLに変更！
-SERVER_URL = 'http://ec2-13-208-225-4.ap-northeast-3.compute.amazonaws.com/sensor'
+SERVER_URL = 'http://ec2-15-152-151-230.ap-northeast-3.compute.amazonaws.com:5000/sensor'
 
 #ピンの設定
 pin_sensor = machine.Pin(13, machine.Pin.IN)
 led_red = machine.Pin(10, machine.Pin.OUT)
 led_blue = machine.Pin(8, machine.Pin.OUT)
-#内部温度センサーの設定
-sensor_temp = machine.ADC(4)
 
 print('センサー作動中')
 
@@ -60,21 +59,14 @@ def sensor_handler(pin):
     print('動きを検知しました')
     led_red.value(1)
     led_blue.value(1)
-    #温度センサーの値を読み取り温度（℃）へ変換
-    reading = sensor_temp.read_u16() * (3.3/65535)
-    temprature = 27 - (reading - 0.706) / 0.001721
-    #小数点第一位までに丸める
-    temprature = round(temprature, 1)
-    print(f'現在のマイコン温度: {temprature}℃')
-
+    
 # --- ②サーバーへデータ送信
     try: #エラーをキャッチしながら実行するための構文　フリーズ防止機能
             #サーバーに送るデータ（Json形式）
             #『検知した』というステータスなどを送信
         data = {'device_name': 'pico_w_01', 
                 'status': 'detected',
-                'temprature': temprature
-                }
+        }
 
         
         #AWS送信するデータの形式設定
@@ -82,8 +74,9 @@ def sensor_handler(pin):
 
         print('EC2へデータを送信中...')
         #HTTP POSTという方法でSERVER_URLにリクエストを送信
-        response = urequests.post(SERVER_URL, json=data, headers=headers) #括弧内のデータは送信側のもつポケット（右側のjson, headers）に実際の変数を入力することにより機能する。
+        response = urequests.post(SERVER_URL, data=ujson.dumps(data), headers=headers) #括弧内のデータは送信側のもつポケット（右側のjson, headers）に実際の変数を入力することにより機能する。
 
+        print(response.status_code)
         #サーバーからの返事（200番なら成功）
         if  response.status_code == 201 or response.status_code == 200:                
             print('AWSへの送信成功')
