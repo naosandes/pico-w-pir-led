@@ -1,18 +1,22 @@
 from flask import Flask, request
 import pymysql
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 main = Flask(__name__)
 
-DB_HOST = 'database-1.cdg4g6mg00u2.ap-northeast-3.rds.amazonaws.com'
-DB_USER = ''
-DB_PASSWORD = 
-DB_NAME = 'sensor_db'
+DB_HOST = os.dotenv('DB_HOST')
+DB_USER = os.dotenv('DB_USER')
+DB_PASSWORD = os.dotenv('DB_PASSWORD')
+DB_NAME = os.dotenv('DB_NAME')
 
 #/にpost通信が来たら関数実行（ルーティング）
 @main.route('/sensor', methods=['post'])
 def receive():
     #Jsonデータを取得
-    data = request.json_get()
+    data = request.get_json()
     device_name = data.get('device_name')
     status = data.get('status')
 
@@ -21,21 +25,21 @@ def receive():
         host=DB_HOST
         user=DB_USER
         password=DB_PASSWORD
-        nama=DB_NAME
-        charset=
+        database=DB_NAME
+        charset='utf8mb4' #文字を正しく読み取ることができるRDSで定められた設定
     )
     
     try:
         #cursorでSQLの実行
-        with connection.cursor() as cursor:
+        with connection.cursor() as cursor: #cursorはデータベースにSQLを送るための窓口
             sql = """
-            INSERT INTO sensor_logs(device_name, status)
-            VALUES (%s, %s)
+            INSERT INTO sensor_logs(device_name, status) #sensor_logsテーブルにデータを追加する命令文
+            VALUES (%s, %s) #後に値を入れる(detected, pico_w_01)
 
-            cursor.execute(sql,(device_name, status))
+            cursor.execute(sql,(device_name, status)) #ここでSQLを実行する
         #保存の確定
         connection.commit()
-
+    #何があっても必ず実行するという命令文
     finally:
         connection.close()
 
